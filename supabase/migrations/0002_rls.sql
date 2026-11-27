@@ -6,11 +6,13 @@
 -- served by the server by token, never by direct table access).
 
 create or replace function app_current_role() returns text
-language sql stable security definer set search_path = public as $$
+language sql stable security definer as $$
   select role from app_users
-  where active and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  where active and lower(email) = lower(coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'email', ''))  -- = auth.jwt() ->> 'email'
   limit 1
 $$;
+-- pin the function to the schema the app lives in (public locally, "hub" on Supabase)
+do $$ begin execute format('alter function app_current_role() set search_path = %I', current_schema()); end $$;
 
 do $$ declare t text; begin
   foreach t in array array['app_users','settings','companies','contacts','opportunities','lead_measures',

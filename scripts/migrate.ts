@@ -17,6 +17,15 @@ async function main() {
   const db = url ? openPostgres(url) : await openPglite(path.resolve(process.env.PGLITE_DIR || ".data/pglite"));
   const applied = await migrate(db, { local: !url });
   await seedDefaults(db);
+  // APP_USERS="email:Name:role,…" adds/updates who may sign in (roles: owner, admin, staff, viewer)
+  for (const entry of (process.env.APP_USERS || "").split(",").map((x) => x.trim()).filter(Boolean)) {
+    const [email, name, role = "staff"] = entry.split(":").map((x) => x.trim());
+    await db.query(
+      `insert into app_users (email, name, role, active) values (lower($1), $2, $3, true)
+       on conflict (email) do update set name = excluded.name, role = excluded.role, active = true`,
+      [email, name || email, role]);
+    console.log(`App user: ${email.toLowerCase()} (${role})`);
+  }
   console.log(applied.length ? `Applied: ${applied.join(", ")}` : "Database is up to date.");
   await db.close();
 }

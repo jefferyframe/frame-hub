@@ -88,20 +88,34 @@ row 38/52/366, so a few rows are left out of its totals; `B12` repeats `B11` ins
   audit log is append-only. The server talks to Postgres directly (`DATABASE_URL`); nothing in the browser
   touches the database. Client proposal links (`/p/<token>`) are served by the server, by an unguessable token,
   only once a proposal is approved.
-- **Sign-in**: behind one interface, `lib/auth`. Production refuses the local stand-in user unless
-  `ALLOW_DEV_AUTH=1`. To add Microsoft 365 or Google, implement `AuthProvider` (e.g. Auth.js with Entra ID or
-  Google) and set `AUTH_PROVIDER`.
+- **Sign-in**: behind one interface, `lib/auth`. In production (`AUTH_PROVIDER=supabase`) it's Supabase Auth email
+  sign-in: a magic link or the 6-digit code from the same email, or a password if the account has one. Nobody is
+  created by signing in: an email must be in `ALLOWED_EMAILS` **and** active in `app_users`, and already exist in
+  Supabase Auth. `middleware.ts` verifies the session with Supabase on every page and API request (pages redirect to
+  `/signin`, APIs return 401); the layout, API routes and server actions check `app_users` again. Public on purpose:
+  `/signin`, `/auth/*`, and client proposal links `/p/<token>` (approved proposals only). Locally the stand-in
+  user is used (`AUTH_PROVIDER=dev`); production refuses it unless `ALLOW_DEV_AUTH=1`. Microsoft 365 / Google
+  can be added later as Supabase Auth providers.
 - **QuickBooks**: a seam only (`lib/integrations/quickbooks.ts`) — the customer / job / invoice mapping is written
   and tested; the API client is not built yet.
 - **AI**: "Polish with Claude" runs on the server only when `ANTHROPIC_API_KEY` is set (`ANTHROPIC_MODEL`
   optional).
 
-## Going live later (not done yet)
+## Hosting
 
-1. Create a Supabase project, run the migrations (`DATABASE_URL=… npm run db:migrate`), add the team to
-   `app_users`, run `npm run import` against it once.
-2. Deploy to Vercel with `DATABASE_URL` (pooled connection string), `AUTH_PROVIDER`, and optionally
-   `ANTHROPIC_API_KEY`, `PDF_ACCENT`, `PDF_INK`.
+- **Vercel** project `frame-hub` (production branch `main`).
+- **Database**: Frame Hub lives in its own Postgres schema, `hub`, inside Frame's existing Supabase project, owned by a
+  dedicated login role `hub_app` whose `search_path` is `hub`. That role can't read the old quoting tool's `public`
+  tables, and `hub` is not exposed to the Supabase REST API — only the server reaches it, through the transaction
+  pooler (`DATABASE_URL=postgresql://hub_app.<project-ref>:…@aws-0-<region>.pooler.supabase.com:6543/postgres`).
+- Migrations and the importer run from a laptop against that URL:
+  `DATABASE_URL=… APP_USERS="email:Name:owner,…" npm run db:migrate`, then `DATABASE_URL=… npm run import`.
+- Environment variables (Vercel): `DATABASE_URL` (sensitive), `SUPABASE_URL`, `SUPABASE_ANON_KEY` (publishable key),
+  `AUTH_PROVIDER=supabase`, `ALLOWED_EMAILS`, optionally `APP_URL`, `ANTHROPIC_API_KEY`, `PDF_ACCENT`, `PDF_INK`.
+- Supabase Auth → URL configuration must list `https://<app>/auth/callback**` as a redirect URL, and the
+  "Magic link or OTP" email template should include `{{ .Token }}` so the code works on another device.
+- Supabase's built-in mailer only delivers to members of the Supabase organization's team (and ~2 emails/hour).
+  Add custom SMTP (Authentication → SMTP) before more people use email sign-in.
 
 ## Look & feel
 

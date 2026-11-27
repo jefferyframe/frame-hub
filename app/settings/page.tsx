@@ -52,7 +52,7 @@ export default async function Settings() {
       <div className="card stack">
         <h2>Connections</h2>
         <table className="small"><tbody>
-          <tr><td>Sign-in</td><td>{authProvider().id === "dev" ? "Local stand-in user (Microsoft 365 / Google not connected yet)" : authProvider().id}</td></tr>
+          <tr><td>Sign-in</td><td>{authProvider().id === "dev" ? "Local stand-in user (Microsoft 365 / Google not connected yet)" : authProvider().id === "supabase" ? <>Email sign-in for approved team members (Microsoft 365 / Google later) · <form action="/auth/signout" method="post" style={{ display: "inline" }}><button className="btn small" type="submit">Sign out</button></form></> : authProvider().id}</td></tr>
           <tr><td>QuickBooks</td><td>{qb ? "Connected" : "Not connected — customer and invoice mapping is ready for it"}</td></tr>
           <tr><td>Claude scope drafting</td><td>{aiConfigured() ? "On" : "Off (set ANTHROPIC_API_KEY)"}</td></tr>
           <tr><td>Theme</td><td>styles/theme.css — one line switches between the design directions</td></tr>

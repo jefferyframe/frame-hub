@@ -27,6 +27,7 @@ export function openPostgres(url: string): Db {
   const sql = postgres(url, {
     max: 5,
     prepare: false, // required by Supabase's transaction pooler
+    onnotice: () => {},
     types: {
       date: { to: 1082, from: [1082], serialize: (x: string) => x, parse: (x: string) => x },
       numeric: { to: 1700, from: [1700], serialize: (x: number) => String(x), parse: (x: string) => Number(x) },
