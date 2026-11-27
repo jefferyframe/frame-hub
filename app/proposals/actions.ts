@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ctx } from "@/lib/server";
 import { createProposal, updateProposal, setProposalStatus, newVersion, type ProposalPatch } from "@/lib/repo/proposals";
-import { proposalToOpportunity } from "@/lib/flow";
+import { proposalToOpportunity, proposalSent } from "@/lib/flow";
 import type { ProposalItemInput } from "@/lib/calc/proposal";
 import { suggestArchPct } from "@/lib/calc/proposal";
 import { draftScope, aiConfigured } from "@/lib/ai";
@@ -29,18 +29,19 @@ export async function saveProposalAction(id: string, patch: ProposalPatch, items
 export async function setStatusAction(id: string, status: string, extra?: { accepted_by_name?: string }) {
   const { db, actor } = await ctx();
   await setProposalStatus(db, id, status, actor, extra);
+  // Sending a proposal creates/updates its deal in the CRM, with a follow-up task.
+  if (status === "sent") await proposalSent(db, id, actor);
   // Accepting or declining a proposal moves its pipeline row too.
-  if (status === "accepted" || status === "declined" || status === "sent") {
+  if (status === "accepted" || status === "declined") {
     const [p] = await db.query<{ opportunity_id: string | null }>(`select opportunity_id from proposals where id = $1`, [id]);
     if (p?.opportunity_id) {
       const { setOpportunityStatus } = await import("@/lib/repo/opportunities");
-      const target = status === "accepted" ? "Sold" : status === "declined" ? "Rejected" : "Presented";
-      const [o] = await db.query<{ status: string }>(`select status from opportunities where id = $1`, [p.opportunity_id]);
-      if (o && !(target === "Presented" && o.status !== "Proposal Needed" && o.status !== "Internal Review" && o.status !== "Consultant Outreach"))
-        await setOpportunityStatus(db, p.opportunity_id, target, actor);
+      const target = status === "accepted" ? "Sold" : "Rejected";
+      await setOpportunityStatus(db, p.opportunity_id, target, actor);
     }
   }
   revalidatePath(`/proposals/${id}`);
+  revalidatePath("/crm");
 }
 
 export async function newVersionAction(id: string) {

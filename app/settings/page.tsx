@@ -6,19 +6,44 @@ import { authProvider } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
 import { saveSettingsAction } from "./actions";
 import { pct } from "@/lib/format";
+import { headers } from "next/headers";
+import { currentUser } from "@/lib/auth";
+import { listTeam, currentFeedToken } from "@/lib/repo/team";
+import { matchMember } from "@/lib/crm/logic";
+import { TeamSettings } from "@/components/crm/TeamSettings";
+import { CalendarSettings } from "@/components/crm/CalendarSettings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Settings" };
 
-export default async function Settings() {
+export default async function Settings({ searchParams }: { searchParams: Promise<{ cal?: string }> }) {
   const db = await getDb();
+  const { cal } = await searchParams;
+  const [team, user, h] = await Promise.all([listTeam(db, { all: true }), currentUser(), headers()]);
+  const counts = new Map((await db.query<{ owner_id: string; n: number }>(`select owner_id, count(*)::int n from tasks where done_at is null and owner_id is not null group by owner_id`)).map((r) => [r.owner_id, r.n]));
+  const me = matchMember(team, user?.name);
+  const calFor = team.find((m) => m.id === cal && m.active) ?? me;
+  const origin = `${h.get("x-forwarded-proto") ?? (h.get("host")?.startsWith("localhost") ? "http" : "https")}://${h.get("x-forwarded-host") ?? h.get("host")}`;
+  const calToken = calFor ? await currentFeedToken(db, calFor.id) : null;
   const s = await getSettings(db);
   const ov = overallLikelihoods(s.stageLikelihood);
   const [runs] = await Promise.all([db.query<{ at: Date; source: string }>(`select at, source from import_runs order by at desc limit 1`)]);
   const qb = await quickbooks().connected();
   return (
     <div className="stack" style={{ maxWidth: 900 }}>
-      <div className="pagehead"><div><h1>Settings</h1><p>Firm details used on proposals, and the numbers behind the pipeline and job-cost math.</p></div></div>
+      <div className="pagehead"><div><h1>Settings</h1><p>Your calendar, the team, firm details used on proposals, and the numbers behind the pipeline and job-cost math.</p></div></div>
+      <div className="card stack" id="calendar">
+        <header><h2>{calFor && calFor.id !== me?.id ? `${calFor.name}’s calendar` : "Your calendar"}</h2>
+          <form className="row" style={{ gap: 6 }}><select name="cal" defaultValue={calFor?.id ?? ""} aria-label="Whose calendar" style={{ width: "auto" }}>{!me && <option value="">Choose a person…</option>}{team.filter((m) => m.active).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select><button className="btn sm">Show</button></form>
+        </header>
+        <p className="small muted">Tasks and reminders assigned to a person show up in their own calendar (Outlook, Google or Apple) through a private link that updates as tasks change. Done tasks disappear from it. Set it up once per person.</p>
+        {calFor ? <CalendarSettings key={calFor.id} memberId={calFor.id} name={calFor.name} origin={origin} token={calToken} includeUnassigned={calFor.cal_include_unassigned} hasFeed={!!calFor.has_feed} />
+          : <p className="notice">“{user?.name}” isn’t on the team list below, so pick a person above (or add yourself to the team).</p>}
+      </div>
+      <div className="card stack" id="team">
+        <header><h2>Team</h2><span className="small muted">Who tasks can be assigned to · the first name you sign in with is you</span></header>
+        <TeamSettings rows={team.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, active: m.active, has_feed: !!m.has_feed, open_tasks: counts.get(m.id) ?? 0 }))} />
+      </div>
       <form action={saveSettingsAction} className="stack">
         <div className="card stack">
           <h2>Firm (proposal letterhead)</h2>

@@ -13,7 +13,7 @@ import { todayISO } from "@/lib/calc/util";
 import { normalizeJobNumber } from "@/lib/calc/jobNumber";
 
 const OPP_FIELDS = {
-  text: ["name", "contact_text", "best_contact_method", "project_type", "project_detail", "follow_up_1_by", "follow_up_1_result", "follow_up_2_by", "follow_up_2_result"],
+  text: ["owner_member_id", "name", "contact_text", "best_contact_method", "project_type", "project_detail", "follow_up_1_by", "follow_up_1_result", "follow_up_2_by", "follow_up_2_result"],
   date: ["date_received", "construction_start", "date_presented", "follow_up_1_date", "follow_up_2_date"],
   num: ["subs_cost", "design_fee", "total_bid_override", "projected_arch_hours"],
 } as const;

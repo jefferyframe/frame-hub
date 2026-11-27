@@ -19,6 +19,43 @@ It replaces the Tracking Sales Sheet, the Job List workbook and the first quotin
   proposal, consultant fees spread by phase) → Closeout → Archived (the pipeline row becomes "Project
   Completed"). Every step is idempotent, linked both ways, and written to the audit trail shown on each record.
 
+## CRM (HubSpot-style, built in)
+
+`/crm` is the day-to-day sales screen, on Frame Hub's own database (no HubSpot):
+
+- **Follow-ups** — tasks and reminders: title, due date + time, owner (a team member), type (call / email / meeting / to-do),
+  priority, calendar reminder, linked deal / contact / company. Grouped Overdue · Today · This week · Later; check off, snooze
+  (1 hour, tomorrow, 3 days, next Monday), edit, delete, or download a single `.ics`. "My follow-ups" for the signed-in person,
+  or the whole team, one person, or unassigned. Log a call / email / note / meeting from the same screen, optionally with a follow-up task.
+- **Proposals sent** (the deals) — every proposal that is out with a client, as stacked rows grouped by follow-up stage
+  (Presented → Follow Up 1 → Follow Up 1 Completed → Follow Up 2 → Follow Up 2 Completed), with fee, client, sent date, days out and next
+  follow-up. Collapsible stage headers show count, total and stage likelihood. Drag rows between stages on a desktop, or use **Move** on
+  a phone; **Won** runs the existing Won → project flow (job number + lead), **Lost** keeps the record with an optional reason.
+  Marking a proposal **Sent** in Proposals creates or updates its deal row and a follow-up task (3-day rule) for whoever sent it.
+- **Leads** — Proposal Needed / Consultant Outreach / Internal Review, same rows.
+- **Records** — every deal (`/sales/<id>`), contact (`/crm/contacts/<id>`) and company (`/crm/companies/<id>`) has its tasks and an
+  activity timeline: notes, calls, emails (logged by hand), meetings, task events and stage changes, each with author and time.
+  Authors can edit or delete their own entries; stage changes are read-only. A company's timeline includes its contacts' and deals'.
+- **Team** — Settings → Team lists who tasks can be assigned to (seeded from the Job List: Jeff, Bella, June, Roy, Troy, Brandon,
+  Jaden, Emily, Mathew). The first name someone signs in with maps them to their team entry.
+
+### Calendar
+
+`lib/calendar` is the one interface (`CalendarSync`) tasks go through. Today it's a **subscribable iCalendar feed per person**:
+Settings → Your calendar → *Create link*, then *Add to Outlook / Google / Apple* (step-by-step instructions are on the page).
+
+- URL: `/api/cal/<token>.ics` — the token is 256 random bits. The database keeps only its SHA-256 (lookup) and an AES-GCM-encrypted
+  copy keyed from `SESSION_SECRET` (so Settings can show the link again). *Make a new link* revokes the old one at once; *Turn off* removes it.
+- The sign-in gate lets through only paths of exactly that shape; anything else under `/api/cal` gets the usual 401, and an unknown,
+  revoked or inactive person's token gets a bare 404 — nothing else is revealed.
+- The feed holds that person's open tasks with a due date (optionally unassigned ones too), from 60 days back; done tasks drop out.
+  Timed tasks are UTC events with a `VALARM` reminder; undated-time tasks are all-day. Each event keeps a stable UID and a SEQUENCE that
+  bumps on every change, so calendars update instead of duplicating.
+- Refresh is up to the calendar app: Apple as often as set, Outlook every few hours (can be up to a day), Google up to a day. Each task
+  also has an **Add to calendar** button (single-event `.ics`) for something due soon.
+- Microsoft Graph (push events straight into Outlook) slots in later as another `CalendarSync` — see `GraphCalendarSync` in
+  `lib/calendar/index.ts` — once Entra sign-in exists.
+
 ## Run it locally (no accounts needed)
 
 ```bash
@@ -53,7 +90,7 @@ workbook is large; expect ~1.5 minutes.
 
 ```bash
 npm run typecheck
-npm test                    # 62 tests: every sheet formula, the fee logic, importers, and the full flow on a real Postgres (PGlite)
+npm test                    # 90 tests: every sheet formula, the fee logic, importers, and the full flow on a real Postgres (PGlite)
 npm run build
 ```
 
@@ -114,8 +151,8 @@ row 38/52/366, so a few rows are left out of its totals; `B12` repeats `B11` ins
 For now Frame Hub sits behind a simple gate: first name + one shared password (`SITE_PASSWORD`, set only in Vercel,
 never in the repo). A good password sets an HttpOnly, Secure, signed cookie (`SESSION_SECRET`) for 30 days; the
 first name labels changes in the activity log. Wrong passwords are rate limited (5 per address and 30 overall per
-15 minutes, table `login_attempts`). Middleware keeps every page and API behind it; only `/signin` and the
-token-protected client proposal links (`/p/<token>`) are public. Changing `SITE_PASSWORD` or `SESSION_SECRET`
+15 minutes, table `login_attempts`). Middleware keeps every page and API behind it; only `/signin`, the
+token-protected client proposal links (`/p/<token>`) and calendar feeds (`/api/cal/<token>.ics`) are public. Changing `SITE_PASSWORD` or `SESSION_SECRET`
 signs everyone out. Sign-in is behind the `AuthProvider` interface in `lib/auth/index.ts`, so Microsoft Entra ID
 replaces the gate later without touching any page.
 

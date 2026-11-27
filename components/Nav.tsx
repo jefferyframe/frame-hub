@@ -1,15 +1,16 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconHome, IconDoc, IconFunnel, IconUsers, IconCheck, IconChart, IconMega, IconBuild, IconCog, IconBook } from "./icons";
+import { IconHome, IconDoc, IconFunnel, IconUsers, IconChart, IconMega, IconBuild, IconCog, IconBook, IconCrm, IconGrid } from "./icons";
 
 const GROUPS = [
   { items: [{ href: "/", label: "Dashboard", Icon: IconHome }] },
   { title: "Proposals", items: [{ href: "/proposals", label: "Proposals", Icon: IconDoc }, { href: "/proposals/library", label: "Line items & precedents", Icon: IconBook }] },
   { title: "Sales", items: [
-    { href: "/sales", label: "Pipeline", Icon: IconFunnel },
-    { href: "/sales/follow-ups", label: "Follow-ups", Icon: IconCheck },
+    { href: "/crm", label: "CRM", Icon: IconCrm },
+    { href: "/sales", label: "Pipeline sheet", Icon: IconFunnel },
     { href: "/sales/contacts", label: "Contacts", Icon: IconUsers },
+    { href: "/crm/companies", label: "Companies", Icon: IconGrid },
     { href: "/sales/measures", label: "Lead & lag measures", Icon: IconChart },
     { href: "/sales/outreach", label: "Outreach", Icon: IconMega },
   ] },
@@ -43,8 +44,8 @@ export function SideNav({ user }: { user: { name: string; email: string } }) {
 const TABS = [
   { href: "/", label: "Home", Icon: IconHome },
   { href: "/proposals", label: "Proposals", Icon: IconDoc },
-  { href: "/sales", label: "Sales", Icon: IconFunnel },
-  { href: "/sales/follow-ups", label: "Follow-ups", Icon: IconCheck },
+  { href: "/crm", label: "CRM", Icon: IconCrm },
+  { href: "/sales", label: "Pipeline", Icon: IconFunnel },
   { href: "/projects", label: "Jobs", Icon: IconBuild },
 ];
 export function TabBar() {
@@ -52,7 +53,7 @@ export function TabBar() {
   return (
     <nav className="tabs" aria-label="Sections">
       {TABS.map(({ href, label, Icon }) => (
-        <Link key={href} href={href} aria-current={(href === "/" ? path === "/" : path.startsWith(href) && !(href === "/sales" && path.startsWith("/sales/follow-ups"))) ? "page" : undefined}><Icon />{label}</Link>
+        <Link key={href} href={href} aria-current={(href === "/" ? path === "/" : path === href || path.startsWith(href + "/")) ? "page" : undefined}><Icon />{label}</Link>
       ))}
     </nav>
   );

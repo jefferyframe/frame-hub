@@ -38,11 +38,15 @@ export function splitName(full: string | null | undefined): { first_name: string
   return { first_name: parts[0], last_name: parts.slice(1).join(" ") || null };
 }
 
-export async function addTask(db: Db, t: { title: string; due_on?: string | null; cadence?: string | null; contact_id?: string | null; opportunity_id?: string | null; project_id?: string | null; assignee?: string | null; notes?: string | null; source_key?: string | null }) {
+/** Low-level task insert for generated follow-ups and imports (idempotent on source_key). Manual tasks go through repo/tasks createTask. */
+export async function addTask(db: Db, t: { title: string; due_on?: string | null; cadence?: string | null; contact_id?: string | null; opportunity_id?: string | null; project_id?: string | null; company_id?: string | null; assignee?: string | null; owner_id?: string | null; notes?: string | null; source_key?: string | null; kind?: string | null }) {
   const [row] = await db.query<{ id: string }>(
-    `insert into tasks (title, due_on, cadence, contact_id, opportunity_id, project_id, assignee, notes, source_key)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict (source_key) do nothing returning id`,
-    [t.title, t.due_on ?? null, t.cadence ?? null, t.contact_id ?? null, t.opportunity_id ?? null, t.project_id ?? null, t.assignee ?? null, t.notes ?? null, t.source_key ?? null],
+    `insert into tasks (title, due_on, cadence, contact_id, opportunity_id, project_id, assignee, notes, source_key, owner_id, company_id, kind)
+     values ($1,$2,$3,$4,$5,$6,coalesce($7, (select name from team_members where id = $10)),$8,$9,$10,
+       coalesce($11, (select company_id from opportunities where id = $5), (select company_id from contacts where id = $4)), coalesce($12,'todo'))
+     on conflict (source_key) do nothing returning id`,
+    [t.title, t.due_on ?? null, t.cadence ?? null, t.contact_id ?? null, t.opportunity_id ?? null, t.project_id ?? null, t.assignee ?? null, t.notes ?? null, t.source_key ?? null,
+      t.owner_id ?? null, t.company_id ?? null, t.kind ?? null],
   );
   return row?.id ?? null;
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { addContactAction, makePastClientAction } from "../actions";
 import { date } from "@/lib/format";
@@ -30,7 +31,7 @@ export default async function Contacts({ searchParams }: { searchParams: Promise
           <thead><tr><th>Name</th><th>Company</th><th className="hide-sm">Contact</th><th className="hide-sm">Met / client since</th><th className="hide-sm">LinkedIn · card</th><th>Next follow-up</th><th /></tr></thead>
           <tbody>{list.map((r) => (
             <tr key={r.id}>
-              <td>{r.full_name || r.email}<div className="small faint">{r.title}</div></td>
+              <td><Link href={`/crm/contacts/${r.id}`}>{r.full_name || r.email}</Link><div className="small faint">{r.title}</div></td>
               <td>{r.company ?? "—"}{r.is_past_client && <> <span className="pill ok">past client</span></>}</td>
               <td className="hide-sm small">{r.email && <a href={`mailto:${r.email}`}>{r.email}</a>}<div>{r.phone}</div></td>
               <td className="hide-sm small">{r.is_past_client ? date(r.past_client_since) : date(r.met_on)}</td>

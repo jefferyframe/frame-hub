@@ -91,7 +91,7 @@ export default async function Dashboard() {
           </table></div>
         </div>
         <div className="card">
-          <header><h2>Follow-ups due</h2><Link className="small" href="/sales/follow-ups">All</Link></header>
+          <header><h2>Follow-ups due</h2><Link className="small" href="/crm">All</Link></header>
           {tasks.length ? (
             <ul className="timeline">{tasks.slice(0, 8).map((t) => (
               <li key={t.id}><div>{t.title}</div><div className={t.due_on && t.due_on < today ? "small" : "faint"} style={t.due_on && t.due_on < today ? { color: "var(--danger)" } : undefined}>{date(t.due_on)}{t.opportunity_name ? ` · ${t.opportunity_name}` : ""}</div></li>

@@ -11,7 +11,7 @@ export interface Opportunity {
   date_presented: string | null; follow_up_1_date: string | null; follow_up_1_by: string | null; follow_up_1_result: string | null;
   follow_up_2_date: string | null; follow_up_2_by: string | null; follow_up_2_result: string | null;
   subs_cost: number | null; design_fee: number | null; total_bid_override: number | null; projected_arch_hours: number | null;
-  proposal_id: string | null; closed_at: Date | null; created_at: Date; updated_at: Date;
+  proposal_id: string | null; owner_member_id: string | null; closed_at: Date | null; created_at: Date; updated_at: Date;
   company_name?: string | null; contact_name?: string | null; project_id?: string | null; project_job_number?: string | null;
 }
 export interface Proposal {
@@ -37,4 +37,9 @@ export interface Project {
 export interface ProjectPhase { id: string; project_id: string; phase: string; sort: number; fee_pct: number | null; arch_fee: number | null; hours_pct: number | null; hours_assigned: number | null; target_date: string | null; status: string }
 export interface ProjectConsultant { id: string; project_id: string; discipline: string; firm: string | null; phase: string; fee: number | null; status: string | null }
 export interface TimeEntry { id: string; project_id: string; phase: string; week_label: string | null; week_ending: string | null; person: string | null; hours: number; notes: string | null }
-export interface Task { id: string; title: string; due_on: string | null; done_at: Date | null; assignee: string | null; cadence: string | null; contact_id: string | null; opportunity_id: string | null; project_id: string | null; notes: string | null }
+export interface Task {
+  id: string; title: string; due_on: string | null; due_at: Date | null; done_at: Date | null; assignee: string | null; cadence: string | null;
+  contact_id: string | null; opportunity_id: string | null; project_id: string | null; company_id: string | null; notes: string | null;
+  owner_id: string | null; kind: "todo" | "call" | "email" | "meeting"; priority: "low" | "normal" | "high"; reminder_minutes: number | null;
+  created_by: string | null; snoozed_count: number; sequence: number; created_at: Date; updated_at: Date;
+}

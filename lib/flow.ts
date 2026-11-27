@@ -19,6 +19,9 @@ import { nextJobNumber, normalizeJobNumber } from "./calc/jobNumber";
 import { nextFollowUpDue } from "./calc/sales";
 import { todayISO } from "./calc/util";
 import { getSettings } from "./repo/settings";
+import { logActivity } from "./repo/activities";
+import { memberForUser } from "./repo/team";
+import { LEAD_STAGES } from "./crm/logic";
 
 const PROPOSAL_TO_PIPELINE: Record<string, string> = {
   draft: "Proposal Needed", in_review: "Internal Review", approved: "Internal Review",
@@ -67,6 +70,41 @@ export async function proposalToOpportunity(db: Db, proposalId: string, actor: s
     });
     return o;
   });
+}
+
+/**
+ * A proposal went to the client → its deal row in the CRM ("Proposals sent").
+ *  - no deal yet: create it (Presented, sent date, fee/subs from the proposal, first follow-up task in 4 days — the sheet's 3-day rule)
+ *  - deal still a lead (Proposal Needed / Consultant Outreach / Internal Review): move it to Presented (same follow-up task)
+ *  - deal already out (e.g. a revised version): refresh its fees and sent date
+ * The deal is owned by whoever sent it (if they're on the team list); open follow-ups without an owner get that owner.
+ * Logged on the deal's timeline. Idempotent: sending twice doesn't duplicate the deal or the task.
+ */
+export async function proposalSent(db: Db, proposalId: string, actor: string, today = todayISO()): Promise<Opportunity> {
+  const p = await one<Proposal>(db, `select * from proposals where id = $1`, [proposalId]);
+  if (!p) throw new Error("Proposal not found");
+  const sentDay = p.sent_at ? new Date(p.sent_at).toISOString().slice(0, 10) : today;
+  const member = await memberForUser(db, actor);
+  let o: Opportunity;
+  const existing = p.opportunity_id ? await one<Opportunity>(db, `select * from opportunities where id = $1`, [p.opportunity_id]) : null;
+  if (!existing) {
+    o = await proposalToOpportunity(db, proposalId, actor, today);
+  } else {
+    const items = await db.query<ProposalItem>(`select * from proposal_items where proposal_id = $1 order by sort`, [p.id]);
+    const st = await getSettings(db);
+    const totals = computeProposal(p, items, { profitPct: st.profitPct, burdenRate: st.burdenRate });
+    await db.query(`update opportunities set subs_cost = $2, design_fee = $3, total_bid_override = null, date_presented = case when status in ('Proposal Needed','Consultant Outreach','Internal Review') or date_presented is null then $4::date else date_presented end where id = $1`,
+      [existing.id, totals.consultantsTotal, totals.phasesTotal + totals.additionalTotal + totals.reimbursablesTotal, sentDay]);
+    o = (LEAD_STAGES as readonly string[]).includes(existing.status)
+      ? await setOpportunityStatus(db, existing.id, "Presented", actor, today)
+      : (await one<Opportunity>(db, `select * from opportunities where id = $1`, [existing.id]))!;
+  }
+  if (member) {
+    await db.query(`update opportunities set owner_member_id = coalesce(owner_member_id, $2) where id = $1`, [o.id, member.id]);
+    await db.query(`update tasks set owner_id = $2, assignee = $3 where opportunity_id = $1 and done_at is null and owner_id is null`, [o.id, member.id, member.name]);
+  }
+  await logActivity(db, { kind: "stage", author: actor, subject: `Proposal ${p.number} v${p.version} sent to the client`, opportunity_id: o.id });
+  return (await one<Opportunity>(db, `select * from opportunities where id = $1`, [o.id]))!;
 }
 
 /** Opportunity Won → Project. Marks the row Sold, issues (or keeps) a job number, creates the

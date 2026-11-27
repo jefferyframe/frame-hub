@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, providerId, verifySession } from "@/lib/auth/token";
+import { FEED_PATH_RE } from "@/lib/calendar/path";
 
 /**
  * Gatekeeper for every page and API route: signed-out requests never reach code that reads data.
  * Pages redirect to /signin, API routes get 401. The layout, API routes and server actions check again.
- * Public on purpose: /signin, /auth/signout, and client proposal links /p/<token>, /api/p/<token>/… (approved proposals only).
+ * Public on purpose: /signin, /auth/signout, client proposal links /p/<token>, /api/p/<token>/… (approved proposals only),
+ * and calendar feeds /api/cal/<43-char token>.ics — only that exact token shape; the handler then needs a valid,
+ * unrevoked token (anything else is a bare 404). Every other /api/cal path still gets the 401.
  */
-const PUBLIC = [/^\/signin\/?$/, /^\/auth\/signout\/?$/, /^\/p\/[^/]+/, /^\/api\/p\/[^/]+/];
+const PUBLIC = [/^\/signin\/?$/, /^\/auth\/signout\/?$/, /^\/p\/[^/]+/, /^\/api\/p\/[^/]+/, FEED_PATH_RE];
 
 function pass(req: NextRequest) {
   const h = new Headers(req.headers);

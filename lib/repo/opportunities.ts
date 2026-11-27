@@ -3,6 +3,8 @@ import { one } from "../db/types";
 import type { Opportunity } from "./types";
 import { audit } from "./audit";
 import { addTask } from "./crm";
+import { logActivity } from "./activities";
+import { memberForUser } from "./team";
 import { PIPELINE_STATUSES, autoAdvance, nextFollowUpDue, statusSortOrder } from "../calc/sales";
 import { todayISO } from "../calc/util";
 import { normalizeJobNumber } from "../calc/jobNumber";
@@ -20,7 +22,7 @@ export const getOpportunity = (db: Db, id: string) => one<Opportunity>(db, `${SE
 
 const EDITABLE = ["job_number", "name", "company_id", "contact_id", "contact_text", "best_contact_method", "project_type", "project_detail",
   "date_received", "construction_start", "date_presented", "follow_up_1_date", "follow_up_1_by", "follow_up_1_result",
-  "follow_up_2_date", "follow_up_2_by", "follow_up_2_result", "subs_cost", "design_fee", "total_bid_override", "projected_arch_hours"] as const;
+  "follow_up_2_date", "follow_up_2_by", "follow_up_2_result", "subs_cost", "design_fee", "total_bid_override", "projected_arch_hours", "owner_member_id"] as const;
 export type OpportunityPatch = Partial<Pick<Opportunity, (typeof EDITABLE)[number]>>;
 
 export async function createOpportunity(db: Db, input: OpportunityPatch & { name: string; status?: string }, actor: string) {
@@ -58,8 +60,12 @@ export async function setOpportunityStatus(db: Db, id: string, status: string, a
          closed_at = case when $2 in ('Sold','Rejected') then coalesce(closed_at, now()) when $2 = 'Project Completed' then closed_at else null end
        where id = $1 returning *`, [id, status, presented, fu1, fu2]);
     await audit(t, { actor, entity: "opportunity", id, action: "status", summary: `${cur.status} → ${status}` });
+    await logActivity(t, { kind: "stage", author: actor, subject: `${cur.status} → ${status}`, opportunity_id: id });
     const next = nextFollowUpDue(o);
-    if (next) await addTask(t, { title: `Follow up: ${o.name}`, due_on: next.due, cadence: next.cadence, opportunity_id: o.id, source_key: `opp:${o.id}:${next.cadence}` });
+    if (next) {
+      const owner = cur.owner_member_id ?? (await memberForUser(t, actor))?.id ?? null;
+      await addTask(t, { title: `Follow up: ${o.name}`, due_on: next.due, cadence: next.cadence, kind: "call", opportunity_id: o.id, contact_id: o.contact_id, owner_id: owner, source_key: `opp:${o.id}:${next.cadence}` });
+    }
     return o;
   });
 }
@@ -73,6 +79,7 @@ export async function applyAutoAdvance(db: Db, actor = "system", today = todayIS
     if (s !== o.status) {
       await db.query(`update opportunities set status = $2 where id = $1`, [o.id, s]);
       await audit(db, { actor, entity: "opportunity", id: o.id, action: "status", summary: `${o.status} → ${s} (automatic: follow-up due)` });
+      await logActivity(db, { kind: "stage", author: actor === "system" ? "Frame Hub" : actor, subject: `${o.status} → ${s} (automatic: follow-up due)`, opportunity_id: o.id });
       changed++;
     }
   }
