@@ -27,6 +27,8 @@ export function openPostgres(url: string): Db {
   const sql = postgres(url, {
     max: 5,
     prepare: false, // required by Supabase's transaction pooler
+    max_pipeline: 1, // Supavisor (port 6543) hangs on pipelined queries in transaction mode
+    query_timeout: 25, // seconds; a pooler that stops answering fails the request instead of hanging it
     onnotice: () => {},
     types: {
       date: { to: 1082, from: [1082], serialize: (x: string) => x, parse: (x: string) => x },
