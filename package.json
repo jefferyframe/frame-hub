@@ -1,0 +1,40 @@
+{
+  "name": "frame-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Frame Architecture all-in-one: proposals, sales CRM, projects",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:reset": "tsx scripts/migrate.ts --reset",
+    "import": "tsx scripts/import.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.6.1",
+    "@react-pdf/renderer": "^4.9.2",
+    "exceljs": "^4.4.0",
+    "next": "^15.5.26",
+    "postgres": "^4.1.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
+  }
+}
