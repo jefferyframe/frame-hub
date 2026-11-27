@@ -4,7 +4,8 @@ import { STAGES, overallLikelihoods } from "@/lib/calc/sales";
 import { quickbooks } from "@/lib/integrations/quickbooks";
 import { authProvider } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
-import { saveSettingsAction } from "./actions";
+import { saveSettingsAction, saveHoursSettingsAction } from "./actions";
+import { HoursTeamSettings, ReminderToggle } from "@/components/time/HoursSettings";
 import { pct } from "@/lib/format";
 import { headers } from "next/headers";
 import { currentUser } from "@/lib/auth";
@@ -37,12 +38,24 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           <form className="row" style={{ gap: 6 }}><select name="cal" defaultValue={calFor?.id ?? ""} aria-label="Whose calendar" style={{ width: "auto" }}>{!me && <option value="">Choose a person…</option>}{team.filter((m) => m.active).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select><button className="btn sm">Show</button></form>
         </header>
         <p className="small muted">Tasks and reminders assigned to a person show up in their own calendar (Outlook, Google or Apple) through a private link that updates as tasks change. Done tasks disappear from it. Set it up once per person.</p>
-        {calFor ? <CalendarSettings key={calFor.id} memberId={calFor.id} name={calFor.name} origin={origin} token={calToken} includeUnassigned={calFor.cal_include_unassigned} hasFeed={!!calFor.has_feed} />
-          : <p className="notice">“{user?.name}” isn’t on the team list below, so pick a person above (or add yourself to the team).</p>}
+        {calFor ? <>
+          <CalendarSettings key={calFor.id} memberId={calFor.id} name={calFor.name} origin={origin} token={calToken} includeUnassigned={calFor.cal_include_unassigned} hasFeed={!!calFor.has_feed} />
+          <ReminderToggle key={`r-${calFor.id}`} id={calFor.id} enabled={calFor.remind_enabled} time={calFor.remind_time} />
+        </> : <p className="notice">“{user?.name}” isn’t on the team list below, so pick a person above (or add yourself to the team).</p>}
       </div>
       <div className="card stack" id="team">
         <header><h2>Team</h2><span className="small muted">Who tasks can be assigned to · the first name you sign in with is you</span></header>
         <TeamSettings rows={team.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, active: m.active, has_feed: !!m.has_feed, open_tasks: counts.get(m.id) ?? 0 }))} />
+      </div>
+      <div className="card stack" id="hours">
+        <header><h2>Team hours & reminders</h2><span className="small muted">expected hours drive the missing-hours banner, the report and schedule capacity</span></header>
+        <HoursTeamSettings rows={team.filter((m) => m.active).map((m) => ({ id: m.id, name: m.name, hours_per_day: Number(m.hours_per_day), work_days: m.work_days, track_hours: m.track_hours, remind_enabled: m.remind_enabled, remind_time: m.remind_time, has_feed: !!m.has_feed }))} />
+        <p className="small muted">Track = counted in “Missing hours”. The calendar reminder is a repeating event with an alert in that person’s Frame Hub calendar link (set it up under Your calendar), on their working days at that time, skipping the holidays below. Email / Teams reminders come with Microsoft sign-in.</p>
+        <form action={saveHoursSettingsAction} className="fields">
+          <label className="f"><span>Count missing hours from</span><input type="date" name="hoursTrackingStart" defaultValue={s.hoursTrackingStart} /></label>
+          <label className="f"><span>Firm holidays (one date per line)</span><textarea name="firmHolidays" defaultValue={s.firmHolidays.join("\n")} style={{ minHeight: 90 }} /></label>
+          <div className="wide"><button className="btn">Save hours settings</button></div>
+        </form>
       </div>
       <form action={saveSettingsAction} className="stack">
         <div className="card stack">

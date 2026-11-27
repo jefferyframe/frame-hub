@@ -56,6 +56,37 @@ Settings → Your calendar → *Create link*, then *Add to Outlook / Google / Ap
 - Microsoft Graph (push events straight into Outlook) slots in later as another `CalendarSync` — see `GraphCalendarSync` in
   `lib/calendar/index.ts` — once Entra sign-in exists.
 
+## Hours & schedule
+
+- **Project card** — click any job (Job list, dashboard, schedule, timesheet) and its card opens over the page (`?card=<id>`, full
+  screen on a phone): job number, name, client, lead, team, phase, target, estimated finish, schedule status; assigned / worked /
+  remaining hours and burn by phase; job cost (fee, budget, allowance, cost to date at the burden rate); consultants; notes and
+  activity; tasks. **Log hours** sits at the top: who (defaults to you), day (today), phase (current), hours in 0.25 steps,
+  details. You can edit or delete entries you typed (or that are yours); Job List spreadsheet rows are read-only.
+- **Compatible with the weekly log** — each daily entry keeps its day (`work_date`) and is also stamped with that week's Friday
+  (`week_ending`) and the workbook's `Thru M/D/YY` label, so phase hours completed (template N10), remaining (O10) and job cost
+  count both kinds the same way. Re-running the import only replaces spreadsheet rows (`source_key xlsx:…`), never app entries.
+- **My timesheet** (`/timesheet`) — a week grid (jobs × days) for fast entry; rows come from your plan and what you logged; each
+  cell saves on blur (it sets your total for that job/phase/day); day and week totals against expected hours.
+- **Reminders to log hours** — (1) in the app: a banner on the dashboard and timesheet plus a badge on *My timesheet* when the
+  signed-in person has working days this week under their expected hours (default 8 h Mon–Fri; per person in Settings → Team hours;
+  today only counts after their reminder time; firm holidays and days before *Count missing hours from* are skipped);
+  (2) calendar: a repeating “Log your hours” event with an alert in each person's existing calendar feed — their working days at
+  their time (default 4:30 PM Pacific, `TZID=America/Los_Angeles` + `VTIMEZONE`, so DST doesn't move it), holidays as `EXDATE`,
+  on/off per person (Settings → Your calendar, or Team hours); (3) **Missing hours** (`/timesheet/missing`) for Jeff/admins:
+  who hasn't logged which days, by week. Email / Teams pushes go through `lib/notify` (`HoursNotifier`; `GraphHoursNotifier` is the
+  placeholder for Microsoft Graph once Entra sign-in exists).
+- **Schedule** (`/schedule`) — per job and phase: people, hours a week each (typed hours/week, % of their week, or *auto* = an even
+  share of what's left of their week across their running phases), remaining hours (assigned − worked, or the allowance share when
+  nothing is assigned), start (planned, or right after the previous phase) and target. Duration = ⌈remaining ÷ (team h/wk ÷ 5)⌉
+  working days. Views: **Timeline** (Gantt by job and phase; drag a bar to move it, drag its right edge to set the target — on a
+  phone, use the card's Schedule tab), **Workload** (person × week, planned vs capacity, over/full/under; past weeks show hours
+  logged), **Calendar** (Day / Week / Month; plan per person per day, logged hours on past days). Filter by person and job.
+  Plans were seeded once from the Job List (lead + team on the current phase; else whoever logged hours on it recently).
+- **Schedule status** on the Job list: *Over hours* (worked > assigned on a phase), *At risk* (estimated finish after target, or
+  target passed with hours left), *On track*, *Needs plan* (hours left on the running phase but nobody on it), *No target*.
+  Math in `lib/calc/hours.ts` and `lib/calc/schedule.ts`; tests in `tests/hours.test.ts`.
+
 ## Run it locally (no accounts needed)
 
 ```bash
@@ -90,7 +121,7 @@ workbook is large; expect ~1.5 minutes.
 
 ```bash
 npm run typecheck
-npm test                    # 90 tests: every sheet formula, the fee logic, importers, and the full flow on a real Postgres (PGlite)
+npm test                    # 120 tests: every sheet formula, the fee logic, importers, and the full flow on a real Postgres (PGlite)
 npm run build
 ```
 

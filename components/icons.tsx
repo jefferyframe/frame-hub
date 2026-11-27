@@ -22,3 +22,5 @@ export const IconChevron = P("M6 9l6 6 6-6");
 export const IconPlus = P("M12 5v14M5 12h14");
 export const IconClock = P("M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2");
 export const IconCrm = P("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M19 8v6M22 11h-6");
+export const IconGantt = P("M3 4v16h18M7 8h6M9 12h8M6 16h5");
+export const IconAlert = P("M12 3l10 18H2zM12 10v5M12 18h.01");

@@ -36,7 +36,7 @@ export interface Project {
 }
 export interface ProjectPhase { id: string; project_id: string; phase: string; sort: number; fee_pct: number | null; arch_fee: number | null; hours_pct: number | null; hours_assigned: number | null; target_date: string | null; status: string }
 export interface ProjectConsultant { id: string; project_id: string; discipline: string; firm: string | null; phase: string; fee: number | null; status: string | null }
-export interface TimeEntry { id: string; project_id: string; phase: string; week_label: string | null; week_ending: string | null; person: string | null; hours: number; notes: string | null }
+export interface TimeEntry { id: string; project_id: string; phase: string; week_label: string | null; week_ending: string | null; person: string | null; hours: number; notes: string | null; work_date?: string | null; member_id?: string | null; entered_by?: string | null; source_key?: string | null }
 export interface Task {
   id: string; title: string; due_on: string | null; due_at: Date | null; done_at: Date | null; assignee: string | null; cadence: string | null;
   contact_id: string | null; opportunity_id: string | null; project_id: string | null; company_id: string | null; notes: string | null;

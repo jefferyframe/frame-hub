@@ -19,6 +19,8 @@ export async function openDb(): Promise<Db> {
   const db = await openPglite(dir);
   await migrate(db, { local: true });
   await seedDefaults(db);
+  const { seedSchedule } = await import("../repo/schedule");
+  await seedSchedule(db);
   return db;
 }
 

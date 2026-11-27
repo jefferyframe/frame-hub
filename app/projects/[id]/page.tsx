@@ -8,7 +8,8 @@ import { jobListFlags, CONSULTANT_STATUSES } from "@/lib/calc/jobCost";
 import { todayISO } from "@/lib/calc/util";
 import { Lineage, History, ProjectPill, Kpi } from "@/components/bits";
 import { Meter } from "@/components/charts";
-import { projectStatusAction, addHoursAction, phaseAction, projectHeaderAction } from "../actions";
+import { projectStatusAction, phaseAction, projectHeaderAction } from "../actions";
+import { CardLink } from "@/components/project/CardHost";
 import { ConsultantStatus } from "./ConsultantStatus";
 import { money, pct, hrs, date } from "@/lib/format";
 
@@ -31,12 +32,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const ro = p.status === "archived";
   const inScope = c.phases.filter((ph) => ph.feePct > 0 || ph.hoursAssigned > 0 || ph.hoursCompleted !== 0 || ph.phase === c.currentPhase);
   const disciplines = [...new Set(consultants.map((x) => x.discipline))];
-  const people = [...new Set(entries.map((e) => (e.person ?? "").trim()).filter(Boolean))].sort();
   return (
     <div className="stack">
       <div className="pagehead">
         <div>
-          <div className="small muted"><Link href="/projects">Job list</Link> / {p.job_number}</div>
+          <div className="small muted"><Link href="/projects">Job list</Link> / {p.job_number} · <CardLink id={id}>Open card</CardLink></div>
           <h1>{p.job_number} · {p.name}</h1>
           <p className="row" style={{ gap: 8 }}><ProjectPill s={p.status} /><span>{c.currentPhase ?? "No phase selected"}</span>{p.lead && <span>· Lead {p.lead}</span>}{p.team && <span className="muted">· {p.team}</span>}</p>
         </div>
@@ -116,20 +116,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
           <div className="card">
             <header><h2>Hours log</h2><span className="small muted">{entries.length} entries</span></header>
-            {!ro && (
-              <form action={addHoursAction.bind(null, id)} className="row" style={{ marginBottom: 12 }}>
-                <select name="phase" defaultValue={c.currentPhase ?? "Schematic Design"} style={{ width: 210 }}>{phases.map((ph) => <option key={ph.phase}>{ph.phase}</option>)}</select>
-                <input name="person" placeholder="Who" list="people" style={{ width: 120 }} />
-                <datalist id="people">{people.map((x) => <option key={x} value={x} />)}</datalist>
-                <input name="hours" placeholder="Hours" inputMode="decimal" style={{ width: 90 }} required />
-                <input name="week_ending" type="date" defaultValue={today} style={{ width: 150 }} />
-                <input name="notes" placeholder="Notes (e.g. QB)" style={{ flex: 1, minWidth: 120 }} />
-                <button className="btn primary">Log hours</button>
-              </form>
-            )}
+            {!ro && <p className="row" style={{ marginBottom: 12 }}><CardLink id={id} className="btn primary">Log hours</CardLink><span className="small muted">Opens the job card: pick the day, phase and hours, add details. <Link href="/timesheet">My timesheet</Link> logs a whole week at once.</span></p>}
             <div className="tablewrap" style={{ maxHeight: 420, overflowY: "auto" }}><table>
-              <thead><tr><th>Week</th><th>Phase</th><th>Who</th><th className="num">Hours</th><th className="hide-sm">Notes</th></tr></thead>
-              <tbody>{[...entries].reverse().map((e) => <tr key={e.id}><td className="small">{e.week_ending ? date(e.week_ending) : e.week_label}</td><td className="small">{e.phase}</td><td className="small">{e.person}</td><td className="num">{hrs(e.hours)}</td><td className="hide-sm small">{e.notes}</td></tr>)}</tbody>
+              <thead><tr><th>Day / week</th><th>Phase</th><th>Who</th><th className="num">Hours</th><th className="hide-sm">Notes</th></tr></thead>
+              <tbody>{[...entries].sort((a, b) => String(b.work_date ?? b.week_ending ?? "").localeCompare(String(a.work_date ?? a.week_ending ?? ""))).map((e) => <tr key={e.id}><td className="small">{e.work_date ? date(e.work_date, { weekday: "short", month: "short", day: "numeric" }) : e.week_ending ? `wk ${date(e.week_ending)}` : e.week_label}</td><td className="small">{e.phase}</td><td className="small">{e.person}</td><td className="num">{hrs(e.hours)}</td><td className="hide-sm small">{e.notes}</td></tr>)}</tbody>
             </table></div>
           </div>
         </div>

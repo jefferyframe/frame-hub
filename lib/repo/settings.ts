@@ -13,6 +13,12 @@ export interface FirmSettings {
   proposalValidDays: number;
   defaultTerms: string;
   whyFrame: string[];
+  /** Missing-hours checks start on this day (nobody is flagged for days before daily logging existed). */
+  hoursTrackingStart: string;
+  /** Days nobody is expected to log hours; the calendar reminder skips them too. */
+  firmHolidays: string[];
+  /** Set once the schedule has been seeded from the Job List (so deleting a seeded plan doesn't bring it back). */
+  scheduleSeededAt: string | null;
 }
 
 export const DEFAULT_SETTINGS: FirmSettings = {
@@ -33,6 +39,9 @@ export const DEFAULT_SETTINGS: FirmSettings = {
     "Direct experience with projects of comparable scope and complexity",
     "A realistic, sequenced path from scope to a permitted, buildable design",
   ],
+  hoursTrackingStart: "2026-11-30",
+  firmHolidays: ["2026-12-24", "2026-12-25", "2027-01-01", "2027-05-31", "2027-07-05", "2027-09-06", "2027-11-25", "2027-11-26", "2027-12-24"],
+  scheduleSeededAt: null,
 };
 
 export async function getSettings(db: Db): Promise<FirmSettings> {

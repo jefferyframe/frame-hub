@@ -6,6 +6,7 @@ import { openPglite } from "../lib/db/pglite";
 import { openPostgres } from "../lib/db/postgres";
 import { migrate } from "../lib/db/migrate";
 import { seedDefaults } from "../lib/repo/defaults";
+import { seedSchedule } from "../lib/repo/schedule";
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -26,6 +27,8 @@ async function main() {
       [email, name || email, role]);
     console.log(`App user: ${email.toLowerCase()} (${role})`);
   }
+  const seed = await seedSchedule(db);
+  if (!seed.skipped) console.log(`Schedule seeded from the Job List: ${seed.seeded} jobs`);
   console.log(applied.length ? `Applied: ${applied.join(", ")}` : "Database is up to date.");
   await db.close();
 }

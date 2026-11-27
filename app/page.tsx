@@ -10,6 +10,10 @@ import { addDays, todayISO } from "@/lib/calc/util";
 import { Bars, Funnel, Lines, Meter } from "@/components/charts";
 import { Kpi } from "@/components/bits";
 import { compactMoney, money, pct, hrs, date } from "@/lib/format";
+import { currentUser } from "@/lib/auth";
+import { myMissing } from "@/lib/repo/time";
+import { HoursBanner } from "@/components/time/HoursBanner";
+import { CardLink } from "@/components/project/CardHost";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +27,7 @@ export default async function Dashboard() {
     db.query<{ opportunity: string; status: string }>(`select opportunity, status from lag_measures`),
     db.query<{ status: string; n: number }>(`select status, count(*)::int n from proposals where is_current group by status`),
   ]);
+  const mine = await myMissing(db, (await currentUser())?.name).catch(() => null);
   const s = pipelineSummary(opps, settings.stageLikelihood);
   const lt = leadTotals(leads);
   const trend = leadTrend(leads, "month");
@@ -40,6 +45,8 @@ export default async function Dashboard() {
         <div><h1>Dashboard</h1><p>{date(today, { weekday: "long", month: "long", day: "numeric" })}</p></div>
         <div className="row"><Link className="btn primary" href="/proposals/new">New proposal</Link><Link className="btn" href="/sales/measures">Log today’s lead measures</Link></div>
       </div>
+
+      {mine && <HoursBanner missing={mine.missing} />}
 
       <div className="grid g4">
         <Kpi label="Weighted pipeline" value={compactMoney(s.weightedTotal)} sub={`${compactMoney(s.openTotal)} open across ${s.stages.reduce((a, x) => a + x.count, 0)} opportunities`} />
@@ -83,7 +90,7 @@ export default async function Dashboard() {
             <thead><tr><th>Job</th><th className="hide-sm">Phase</th><th className="num">Assigned</th><th className="num">Worked</th><th style={{ width: "28%" }}>Burn</th></tr></thead>
             <tbody>{active.map(({ project: p, cost: c }) => (
               <tr key={p.id}>
-                <td><Link href={`/projects/${p.id}`}>{p.job_number}</Link> <span className="muted small">{p.name}</span></td>
+                <td><CardLink id={p.id}>{p.job_number}</CardLink> <span className="muted small">{p.name}</span></td>
                 <td className="hide-sm small">{c.currentPhase ?? "—"}</td>
                 <td className="num">{hrs(c.current!.hoursAssigned)}</td><td className="num">{hrs(c.current!.hoursCompleted)}</td>
                 <td><Meter value={c.current!.hoursCompleted} max={c.current!.hoursAssigned} warnAt={0.9} /><span className="small faint">{pct(burnOf(c))} · {hrs(c.current!.hoursRemaining)} h left</span></td>

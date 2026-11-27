@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { ctx, str, num } from "@/lib/server";
-import { setProjectStatus, addTimeEntry, updatePhase, setConsultantStatus } from "@/lib/repo/projects";
+import { setProjectStatus, updatePhase, setConsultantStatus } from "@/lib/repo/projects";
 import { audit } from "@/lib/repo/audit";
 
 export async function projectStatusAction(id: string, status: string) {
@@ -9,15 +9,6 @@ export async function projectStatusAction(id: string, status: string) {
   await setProjectStatus(db, id, status, actor);
   revalidatePath(`/projects/${id}`);
   revalidatePath("/projects");
-}
-
-export async function addHoursAction(id: string, f: FormData) {
-  const { db, actor } = await ctx();
-  const hours = num(f, "hours");
-  if (hours === null) throw new Error("Enter the hours worked.");
-  const week = str(f, "week_ending");
-  await addTimeEntry(db, { project_id: id, phase: str(f, "phase")!, person: str(f, "person"), hours, week_ending: week, week_label: week ? `Thru ${week}` : null, notes: str(f, "notes") }, actor);
-  revalidatePath(`/projects/${id}`);
 }
 
 export async function phaseAction(id: string, phase: string, f: FormData) {
