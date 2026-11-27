@@ -1,0 +1,26 @@
+/* Frame Hub — default "Neutral" theme. Same variable vocabulary as the three design
+   directions in this folder, so any of them can replace this file one-for-one. */
+:root{
+  --option-name:"Neutral";
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display-weight:600; --display-tracking:-0.01em;
+  --label-transform:uppercase; --label-tracking:0.06em; --label-font:var(--font-body);
+
+  --bg:#F6F6F4; --bg-grid:transparent;
+  --surface:#FFFFFF; --surface-2:#F1F1EE;
+  --sidebar:#FFFFFF; --sidebar-text:#4A4D52; --sidebar-active:#F1F1EE;
+  --border:#E3E3DF; --border-strong:#C9C9C3;
+  --text:#1D1F22; --text-muted:#62666D; --text-faint:#8D9097;
+  --accent:#2E5E73; --accent-contrast:#FFFFFF; --accent-soft:#E3EDF1;
+  --success:#2F7A4F; --warning:#A2690B; --danger:#B2402F;
+  --chart-1:#2E5E73; --chart-2:#C27C3A; --chart-3:#7E9C86; --chart-grid:#E7E7E2;
+  --stage-1:#D5DADC; --stage-2:#B0C0C7; --stage-3:#7E9DAA; --stage-4:#2E5E73; --stage-5:#2F7A4F;
+
+  --radius-sm:4px; --radius:6px; --radius-lg:10px; --radius-pill:999px;
+  --border-width:1px; --shadow:0 1px 2px rgba(20,20,20,.04); --shadow-lg:0 8px 24px rgba(20,20,20,.08);
+  --density:1; --gap:16px; --pad:18px; --row-h:44px;
+  --sidebar-w:224px;
+  --fs-body:14px; --fs-small:12px; --fs-label:11px; --fs-kpi:28px; --fs-h1:24px;
+}

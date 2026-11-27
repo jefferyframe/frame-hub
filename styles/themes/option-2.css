@@ -1,0 +1,31 @@
+/* Frame Architecture — Option 2: "Studio Dark"
+   Near-black studio canvas, quiet hairlines, single cool accent + warm brass highlight, dense.
+   Inspired by: Linear (quiet hierarchy, single accent), Plane (multi-rail all-in-one layout, list rows),
+   Asana (dark navigation), Stripe (line charts on dashed baselines). */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --option-name:"Studio Dark";
+  --font-display:'Inter Tight', 'Inter', sans-serif;
+  --font-body:'Inter', system-ui, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --display-weight:600; --display-tracking:-0.02em;
+  --label-transform:none; --label-tracking:0; --label-font:var(--font-body);
+
+  --bg:#0B0C0E; --bg-grid:transparent;
+  --surface:#121317; --surface-2:#181A1F;
+  --sidebar:#0E0F12; --sidebar-text:#9EA3AD; --sidebar-active:#1C1E24;
+  --border:#22252C; --border-strong:#343843;
+  --text:#ECEDEF; --text-muted:#9096A1; --text-faint:#6A707C;
+  --accent:#8B9BFF;        /* blueprint indigo */
+  --accent-contrast:#0B0C0E; --accent-soft:rgba(139,155,255,.14);
+  --brass:#E3B562;
+  --success:#4CC38A; --warning:#E3B562; --danger:#F07167;
+  --chart-1:#8B9BFF; --chart-2:#E3B562; --chart-3:#4CC38A; --chart-grid:#262932;
+  --stage-1:#3A3F4B; --stage-2:#4D5670; --stage-3:#6472B8; --stage-4:#8B9BFF; --stage-5:#4CC38A;
+
+  --radius-sm:6px; --radius:8px; --radius-lg:12px; --radius-pill:999px;
+  --border-width:1px; --shadow:0 0 0 1px rgba(255,255,255,.02); --shadow-lg:0 8px 30px rgba(0,0,0,.45);
+  --density:0.9; --gap:14px; --pad:16px; --row-h:42px;
+  --sidebar-w:220px;
+  --fs-body:13px; --fs-small:12px; --fs-label:12px; --fs-kpi:28px; --fs-h1:22px;
+}
