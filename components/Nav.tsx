@@ -34,7 +34,7 @@ export function SideNav({ user }: { user: { name: string; email: string } }) {
           </div>
         ))}
       </nav>
-      <div className="user"><div>{user.name}</div><div className="faint">{user.email}</div>
+      <div className="user"><div>{user.name}</div>{user.email && <div className="faint">{user.email}</div>}
         <form action="/auth/signout" method="post"><button className="btn small" type="submit" style={{ marginTop: 8 }}>Sign out</button></form></div>
     </aside>
   );

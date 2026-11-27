@@ -1,47 +1,37 @@
 "use server";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { VERIFIER_COOKIE, cookieOpts, newPkcePair, passwordSignIn, sendEmailOtp, verifyEmailCode, supabaseConfigured } from "@/lib/auth/gotrue";
-import { appUserFor } from "@/lib/auth";
-import { appOrigin, safeNext, startSession } from "@/lib/auth/session";
+import { getDb } from "@/lib/db";
+import { SESSION_COOKIE, SESSION_DAYS, cookieOpts, gateConfigured, passwordMatches, signSession } from "@/lib/auth/token";
 
-const s = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+const PER_IP = 5;     // wrong tries per address per window
+const GLOBAL = 30;    // wrong tries across everyone per window
+const WINDOW = "15 minutes";
+
+const safeNext = (n: unknown) => (typeof n === "string" && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : "/");
 const back = (q: Record<string, string>) => redirect(`/signin?${new URLSearchParams(q)}`);
 
-export async function sendLinkAction(f: FormData) {
-  const email = s(f, "email").toLowerCase();
-  const next = safeNext(s(f, "next"));
-  if (!supabaseConfigured()) back({ error: "config", next });
-  if (!email || !(await appUserFor(email))) back({ error: "notallowed", next });
-  const { verifier, challenge } = await newPkcePair();
-  (await cookies()).set(VERIFIER_COOKIE, verifier, cookieOpts(60 * 60));
-  const r = await sendEmailOtp(email, `${await appOrigin()}/auth/callback?next=${encodeURIComponent(next)}`, challenge);
-  if (!r.ok) {
-    const code = r.error.code || "";
-    const err = code.includes("not_authorized") ? "mailer" : code.includes("rate_limit") || r.error.status === 429 ? "rate" : "send";
-    back({ error: err, email, next });
+export async function signInAction(f: FormData) {
+  const name = String(f.get("name") ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+  const password = String(f.get("password") ?? "");
+  const next = safeNext(String(f.get("next") ?? "/"));
+  if (!gateConfigured()) back({ error: "config", next });
+  if (!name) back({ error: "name", next });
+
+  const h = await headers();
+  const ip = (h.get("x-forwarded-for") || "").split(",")[0].trim() || h.get("x-real-ip") || "unknown";
+  const db = await getDb();
+  const [{ mine, total }] = await db.query<{ mine: number; total: number }>(
+    `select count(*) filter (where ip = $1)::int as mine, count(*)::int as total from login_attempts where at > now() - interval '${WINDOW}'`, [ip]);
+  if (mine >= PER_IP || total >= GLOBAL) back({ error: "locked", next, name });
+
+  if (!(await passwordMatches(password))) {
+    await db.query(`insert into login_attempts (ip) values ($1)`, [ip]);
+    await db.query(`delete from login_attempts where at < now() - interval '1 day'`);
+    await new Promise((r) => setTimeout(r, 400));
+    back({ error: "password", next, name });
   }
-  back({ sent: "1", email, next });
-}
-
-export async function verifyCodeAction(f: FormData) {
-  const email = s(f, "email").toLowerCase();
-  const code = s(f, "code").replace(/\s+/g, "");
-  const next = safeNext(s(f, "next"));
-  if (!(await appUserFor(email))) back({ error: "notallowed", next });
-  const r = await verifyEmailCode(email, code);
-  if (!r.ok) back({ error: "code", sent: "1", email, next });
-  if (r.ok && !(await startSession(r.data))) back({ error: "notallowed", next });
+  await db.query(`delete from login_attempts where ip = $1`, [ip]);
+  (await cookies()).set(SESSION_COOKIE, await signSession(name), cookieOpts(SESSION_DAYS * 86400));
   redirect(next);
 }
-
-export async function passwordAction(f: FormData) {
-  const email = s(f, "email").toLowerCase();
-  const next = safeNext(s(f, "next"));
-  if (!(await appUserFor(email))) back({ error: "notallowed", next, mode: "password" });
-  const r = await passwordSignIn(email, s(f, "password"));
-  if (!r.ok) back({ error: "password", email, next, mode: "password" });
-  if (r.ok && !(await startSession(r.data))) back({ error: "notallowed", next });
-  redirect(next);
-}
-

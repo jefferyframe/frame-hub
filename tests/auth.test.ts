@@ -1,28 +1,59 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { allowedByEnv, jwtExp, newPkcePair } from "../lib/auth/gotrue";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { passwordMatches, signSession, verifySession, timingSafeEqual, providerId } from "../lib/auth/token";
 
-describe("sign-in helpers", () => {
-  const prev = process.env.ALLOWED_EMAILS;
-  afterEach(() => { process.env.ALLOWED_EMAILS = prev; });
+const keep = { ...process.env };
+// test-only values, unrelated to any real deployment
+beforeEach(() => {
+  process.env.SITE_PASSWORD = "test-only-password";
+  process.env.SESSION_SECRET = "x".repeat(40);
+});
+afterEach(() => { process.env = { ...keep }; });
 
-  it("allows only listed emails, case-insensitively; nobody when the list is empty", () => {
-    process.env.ALLOWED_EMAILS = "a@x.com, B@y.com";
-    expect(allowedByEnv("A@X.com")).toBe(true);
-    expect(allowedByEnv("b@y.com ")).toBe(true);
-    expect(allowedByEnv("c@z.com")).toBe(false);
-    process.env.ALLOWED_EMAILS = "";
-    expect(allowedByEnv("a@x.com")).toBe(false);
+describe("shared-password gate", () => {
+  it("accepts only the exact password", async () => {
+    expect(await passwordMatches("test-only-password")).toBe(true);
+    expect(await passwordMatches("test-only-passwor")).toBe(false);
+    expect(await passwordMatches("Test-only-password")).toBe(false);
+    expect(await passwordMatches("")).toBe(false);
   });
 
-  it("reads a JWT's exp without verifying it, and rejects junk", () => {
-    const b = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
-    expect(jwtExp(`${b({ alg: "none" })}.${b({ exp: 1234 })}.sig`)).toBe(1234);
-    expect(jwtExp("nope")).toBeNull();
+  it("refuses everything when not configured", async () => {
+    delete process.env.SITE_PASSWORD;
+    expect(await passwordMatches("")).toBe(false);
+    process.env.SITE_PASSWORD = "p";
+    process.env.SESSION_SECRET = "short";
+    expect(await passwordMatches("p")).toBe(false);
   });
 
-  it("makes an S256 PKCE pair", async () => {
-    const { verifier, challenge } = await newPkcePair();
-    const { createHash } = await import("node:crypto");
-    expect(createHash("sha256").update(verifier).digest("base64url")).toBe(challenge);
+  it("round-trips a signed session and rejects tampering", async () => {
+    const t = await signSession("Jeff");
+    expect((await verifySession(t))?.n).toBe("Jeff");
+    const [body, sig] = t.split(".");
+    const forged = Buffer.from(JSON.stringify({ n: "Eve", iat: 0, exp: 9e9 })).toString("base64url");
+    expect(await verifySession(`${forged}.${sig}`)).toBeNull();
+    expect(await verifySession(`${body}.${sig}x`)).toBeNull();
+    expect(await verifySession("junk")).toBeNull();
+    expect(await verifySession(undefined)).toBeNull();
+  });
+
+  it("expires sessions and drops them when the secret or password changes", async () => {
+    expect(await verifySession(await signSession("Jeff", -1))).toBeNull();
+    const t = await signSession("Jeff");
+    process.env.SITE_PASSWORD = "rotated";
+    expect(await verifySession(t)).toBeNull();
+  });
+
+  it("compares in constant time, including different lengths", () => {
+    expect(timingSafeEqual(new Uint8Array([1, 2]), new Uint8Array([1, 2]))).toBe(true);
+    expect(timingSafeEqual(new Uint8Array([1, 2]), new Uint8Array([1, 2, 0]))).toBe(false);
+  });
+
+  it("never uses the dev stand-in in production unless explicitly allowed", () => {
+    (process.env as Record<string, string>).NODE_ENV = "production";
+    process.env.AUTH_PROVIDER = "dev";
+    delete process.env.ALLOW_DEV_AUTH;
+    expect(providerId()).toBe("password");
+    delete process.env.AUTH_PROVIDER;
+    expect(providerId()).toBe("password");
   });
 });

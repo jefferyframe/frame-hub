@@ -1,14 +1,12 @@
 import "server-only";
-import { cache } from "react";
 import { cookies } from "next/headers";
-import { SESSION_COOKIE, allowedByEnv, getAuthUser, supabaseConfigured } from "./gotrue";
+import { SESSION_COOKIE, providerId, verifySession } from "./token";
 /**
- * Sign-in is behind this one interface so Microsoft 365 or Google can be plugged in later
- * (e.g. Supabase Auth's Azure / Google providers) without touching any page.
+ * Sign-in is behind this one interface so Microsoft Entra ID (or Google) can replace it later
+ * without touching any page: implement AuthProvider and return it from authProvider().
  *
- *   AUTH_PROVIDER=supabase   Supabase Auth email sign-in (magic link / one-time code, or password),
- *                            limited to ALLOWED_EMAILS that are also active in app_users. Production default.
- *   AUTH_PROVIDER=dev        local stub: everyone is DEV_USER_EMAIL (refused in production unless ALLOW_DEV_AUTH=1)
+ *   password  (production default) shared-password gate: first name + SITE_PASSWORD, signed cookie (SESSION_SECRET)
+ *   dev       local stub: everyone is DEV_USER_EMAIL (AUTH_PROVIDER=dev; refused in production unless ALLOW_DEV_AUTH=1)
  */
 export interface SessionUser { email: string; name: string; role: "owner" | "admin" | "staff" | "viewer" }
 
@@ -32,37 +30,18 @@ const devProvider: AuthProvider = {
   signInUrl,
 };
 
-/** An email may use the app only if it's in ALLOWED_EMAILS and active in app_users; returns its app user. */
-export async function appUserFor(email: string): Promise<SessionUser | null> {
-  if (!allowedByEnv(email)) return null;
-  const { getDb } = await import("../db");
-  const db = await getDb();
-  const rows = await db.query<SessionUser>(
-    `select email, name, role from app_users where active and lower(email) = lower($1) limit 1`, [email.trim()]);
-  return rows[0] ?? null;
-}
-
-const supabaseUser = cache(async (): Promise<SessionUser | null> => {
-  if (!supabaseConfigured()) return null;
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!token) return null;
-  const r = await getAuthUser(token);
-  if (!r.ok || !r.data.email) return null;
-  return appUserFor(r.data.email);
-});
-
-const supabaseProvider: AuthProvider = { id: "supabase", getUser: () => supabaseUser(), signInUrl };
-
-const nobody: AuthProvider = { id: "none", async getUser() { return null; }, signInUrl };
+/** Everyone who knows the shared password is a full user; the first name labels their changes. */
+const passwordProvider: AuthProvider = {
+  id: "password",
+  async getUser() {
+    const s = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
+    return s ? { email: "", name: s.n, role: "admin" } : null;
+  },
+  signInUrl,
+};
 
 export function authProvider(): AuthProvider {
-  const id = process.env.AUTH_PROVIDER || (process.env.NODE_ENV === "production" ? "supabase" : "dev");
-  if (id === "supabase") return supabaseProvider;
-  if (id === "dev") {
-    if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_AUTH !== "1") return nobody;
-    return devProvider;
-  }
-  return nobody;
+  return providerId() === "dev" ? devProvider : passwordProvider;
 }
 
 export async function currentUser(): Promise<SessionUser | null> {

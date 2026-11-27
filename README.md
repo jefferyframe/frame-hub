@@ -88,14 +88,10 @@ row 38/52/366, so a few rows are left out of its totals; `B12` repeats `B11` ins
   audit log is append-only. The server talks to Postgres directly (`DATABASE_URL`); nothing in the browser
   touches the database. Client proposal links (`/p/<token>`) are served by the server, by an unguessable token,
   only once a proposal is approved.
-- **Sign-in**: behind one interface, `lib/auth`. In production (`AUTH_PROVIDER=supabase`) it's Supabase Auth email
-  sign-in: a magic link or the 6-digit code from the same email, or a password if the account has one. Nobody is
-  created by signing in: an email must be in `ALLOWED_EMAILS` **and** active in `app_users`, and already exist in
-  Supabase Auth. `middleware.ts` verifies the session with Supabase on every page and API request (pages redirect to
-  `/signin`, APIs return 401); the layout, API routes and server actions check `app_users` again. Public on purpose:
-  `/signin`, `/auth/*`, and client proposal links `/p/<token>` (approved proposals only). Locally the stand-in
-  user is used (`AUTH_PROVIDER=dev`); production refuses it unless `ALLOW_DEV_AUTH=1`. Microsoft 365 / Google
-  can be added later as Supabase Auth providers.
+- **Sign-in**: behind one interface, `lib/auth`. In production (`AUTH_PROVIDER=password`) it's a shared-password
+  gate (see Sign-in below); `middleware.ts` checks the signed cookie on every page and API request (pages redirect to
+  `/signin`, APIs return 401) and the layout, API routes and server actions check again. Locally the stand-in user is
+  used (`AUTH_PROVIDER=dev`); production refuses it unless `ALLOW_DEV_AUTH=1`. Microsoft Entra ID comes later.
 - **QuickBooks**: a seam only (`lib/integrations/quickbooks.ts`) — the customer / job / invoice mapping is written
   and tested; the API client is not built yet.
 - **AI**: "Polish with Claude" runs on the server only when `ANTHROPIC_API_KEY` is set (`ANTHROPIC_MODEL`
@@ -110,12 +106,18 @@ row 38/52/366, so a few rows are left out of its totals; `B12` repeats `B11` ins
   pooler (`DATABASE_URL=postgresql://hub_app.<project-ref>:…@aws-0-<region>.pooler.supabase.com:6543/postgres`).
 - Migrations and the importer run from a laptop against that URL:
   `DATABASE_URL=… APP_USERS="email:Name:owner,…" npm run db:migrate`, then `DATABASE_URL=… npm run import`.
-- Environment variables (Vercel): `DATABASE_URL` (sensitive), `SUPABASE_URL`, `SUPABASE_ANON_KEY` (publishable key),
-  `AUTH_PROVIDER=supabase`, `ALLOWED_EMAILS`, optionally `APP_URL`, `ANTHROPIC_API_KEY`, `PDF_ACCENT`, `PDF_INK`.
-- Supabase Auth → URL configuration must list `https://<app>/auth/callback**` as a redirect URL, and the
-  "Magic link or OTP" email template should include `{{ .Token }}` so the code works on another device.
-- Supabase's built-in mailer only delivers to members of the Supabase organization's team (and ~2 emails/hour).
-  Add custom SMTP (Authentication → SMTP) before more people use email sign-in.
+- Environment variables (Vercel): `DATABASE_URL` (sensitive), `AUTH_PROVIDER=password`, `SITE_PASSWORD` (sensitive),
+  `SESSION_SECRET` (sensitive, 32+ random characters), optionally `ANTHROPIC_API_KEY`, `PDF_ACCENT`, `PDF_INK`.
+
+## Sign-in
+
+For now Frame Hub sits behind a simple gate: first name + one shared password (`SITE_PASSWORD`, set only in Vercel,
+never in the repo). A good password sets an HttpOnly, Secure, signed cookie (`SESSION_SECRET`) for 30 days; the
+first name labels changes in the activity log. Wrong passwords are rate limited (5 per address and 30 overall per
+15 minutes, table `login_attempts`). Middleware keeps every page and API behind it; only `/signin` and the
+token-protected client proposal links (`/p/<token>`) are public. Changing `SITE_PASSWORD` or `SESSION_SECRET`
+signs everyone out. Sign-in is behind the `AuthProvider` interface in `lib/auth/index.ts`, so Microsoft Entra ID
+replaces the gate later without touching any page.
 
 ## Look & feel
 
