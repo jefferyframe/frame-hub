@@ -1,0 +1,32 @@
+/* Frame Architecture — Option 1: "Drafting Table"
+   Warm paper + ink, hairline rules, serif display, mono drawing-title-block labels.
+   Inspired by: Notion (serif headings, borderless page), Expensify (warm cream fills),
+   PandaDoc (warm off-white proposal frames), Linear (hierarchy from dividers, not chrome). */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --option-name:"Drafting Table";
+  --font-display:'Fraunces', Georgia, serif;
+  --font-body:'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono:'IBM Plex Mono', ui-monospace, monospace;
+  --display-weight:500; --display-tracking:-0.01em;
+  --label-transform:uppercase; --label-tracking:0.08em; --label-font:var(--font-mono);
+
+  --bg:#F4EFE6;            /* trace paper */
+  --bg-grid:rgba(31,29,26,0.045);
+  --surface:#FBF8F2;
+  --surface-2:#EFE8DB;
+  --sidebar:#EDE6D8; --sidebar-text:#3A3631; --sidebar-active:#FBF8F2;
+  --border:#D8CEBC; --border-strong:#1F1D1A;
+  --text:#1F1D1A; --text-muted:#6B645A; --text-faint:#8F877B;
+  --accent:#B4532A;        /* terracotta / redline */
+  --accent-contrast:#FFFFFF; --accent-soft:#F1DED2;
+  --success:#4F6B45; --warning:#A8741A; --danger:#A33A2C;
+  --chart-1:#1F1D1A; --chart-2:#B4532A; --chart-3:#8A9A7B; --chart-grid:#DDD4C3;
+  --stage-1:#CFC6B5; --stage-2:#B7AD99; --stage-3:#C98A69; --stage-4:#B4532A; --stage-5:#4F6B45;
+
+  --radius-sm:2px; --radius:3px; --radius-lg:4px; --radius-pill:2px;
+  --border-width:1px; --shadow:none; --shadow-lg:0 1px 0 rgba(31,29,26,.06);
+  --density:1; --gap:20px; --pad:20px; --row-h:46px;
+  --sidebar-w:232px;
+  --fs-body:14px; --fs-small:12px; --fs-label:10.5px; --fs-kpi:34px; --fs-h1:30px;
+}

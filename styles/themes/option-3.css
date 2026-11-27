@@ -1,0 +1,32 @@
+/* Frame Architecture — Option 3: "Bright Ops"
+   Crisp white SaaS, soft grey canvas, confident blue, pastel stage pills, friendly radius.
+   Inspired by: Attio (hairline borders, calm density), folk (pastel stage pills, black pill buttons),
+   Stripe + Mercury (KPI cards, gradient area charts, tabular figures), HoneyBook (all-in-one home with KPI row + proposal preview). */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+:root{
+  --option-name:"Bright Ops";
+  --font-display:'Geist', 'Inter', sans-serif;
+  --font-body:'Geist', 'Inter', system-ui, sans-serif;
+  --font-mono:'Geist Mono', ui-monospace, monospace;
+  --display-weight:600; --display-tracking:-0.025em;
+  --label-transform:none; --label-tracking:0; --label-font:var(--font-body);
+
+  --bg:#F5F6F8; --bg-grid:transparent;
+  --surface:#FFFFFF; --surface-2:#F8F9FB;
+  --sidebar:#FFFFFF; --sidebar-text:#4A5160; --sidebar-active:#F0F3FF;
+  --border:#E5E7EC; --border-strong:#C9CED8;
+  --text:#0E1525; --text-muted:#5D6575; --text-faint:#8A91A0;
+  --accent:#2E5BFF;        /* confident blue */
+  --accent-contrast:#FFFFFF; --accent-soft:#EAF0FF;
+  --ink-button:#0E1525;
+  --success:#119C5A; --warning:#C27C0E; --danger:#D6453D;
+  --chart-1:#2E5BFF; --chart-2:#13B5A5; --chart-3:#F59E0B; --chart-grid:#ECEEF2;
+  --stage-1:#E9EBF0; --stage-2:#E3ECFF; --stage-3:#FFF1D6; --stage-4:#EDE7FF; --stage-5:#DDF5E8;
+  --stage-1-text:#4A5160; --stage-2-text:#2140B8; --stage-3-text:#8A5A06; --stage-4-text:#5B3CC4; --stage-5-text:#0D7A45;
+
+  --radius-sm:8px; --radius:10px; --radius-lg:14px; --radius-pill:999px;
+  --border-width:1px; --shadow:0 1px 2px rgba(14,21,37,.05); --shadow-lg:0 12px 32px rgba(14,21,37,.10);
+  --density:1; --gap:16px; --pad:20px; --row-h:48px;
+  --sidebar-w:236px;
+  --fs-body:14px; --fs-small:12.5px; --fs-label:12.5px; --fs-kpi:30px; --fs-h1:24px;
+}
